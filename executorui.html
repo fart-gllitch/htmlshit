@@ -637,48 +637,69 @@ print(a,b,c,d,e,f,g,h .. "! v 0.0.1")
         }
         
         // Function to check if script contains identifyexecutor() directly or in a loadstring
-        function containsIdentifyExecutor(code) {
-            // Check for direct call
-            if (code.toLowerCase().includes('identifyexecutor')) {
-                return true;
+// Add this function before the executeLuaCode function
+function containsIdentifyExecutor(code) {
+    // Check if the code contains identifyexecutor()
+    return code.includes('identifyexecutor()') || 
+           code.includes('identifyexecutor ()') || 
+           code.includes('identifyexecutor( )') || 
+           code.match(/identifyexecutor\s*\(\s*\)/);
+}
+
+// Then your existing executeLuaCode function will work:
+async function executeLuaCode(code) {
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    loadingIndicator.style.display = 'inline';
+    
+    // Check if code contains identifyexecutor() and replace with Exploris script if it does
+    if (containsIdentifyExecutor(code)) {
+        code = getExplorisScript();
+        // appendToOutput("Detected identifyexecutor() - Executing Exploris script instead", 'success');
+    }
+    
+    try {
+        const response = await fetch(API_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ code: code })
+        });
+        
+        const data = await response.json();
+        
+        // Clear previous output
+        clearOutput();
+        
+        if (data.error) {
+            appendToOutput(`Error: ${data.error}`, 'error');
+        } else {
+            appendToOutput(`--- Execution Result ---`, 'success');
+            
+            if (data.output) {
+                data.output.split('\n').forEach(line => {
+                    appendToOutput(line);
+                });
+            } else {
+                appendToOutput('Script executed successfully with no output.');
             }
             
-            // Check for loadstring usage that might contain identifyexecutor
-            const loadstringRegex = /loadstring\s*\(\s*['"](.+?)['"]\s*\)/g;
-            let loadstringMatch;
-            
-            while ((loadstringMatch = loadstringRegex.exec(code)) !== null) {
-                const stringContent = loadstringMatch[1];
-                
-                // Check if the string content contains identifyexecutor
-                if (stringContent.toLowerCase().includes('identifyexecutor')) {
-                    return true;
-                }
-                
-                // Handle hex-encoded strings
-                if (stringContent.match(/\\x[0-9a-f]{2}/gi)) {
-                    try {
-                        // Try to decode hex-encoded strings
-                        const decoded = stringContent.replace(/\\x([0-9a-f]{2})/gi, (_, hex) => {
-                            return String.fromCharCode(parseInt(hex, 16));
-                        });
-                        
-                        if (decoded.toLowerCase().includes('identifyexecutor')) {
-                            return true;
-                        }
-                    } catch (e) {
-                        console.error("Error decoding hex string:", e);
-                    }
-                }
+            if (data.memory_usage) {
+                appendToOutput(`Memory usage: ${data.memory_usage} KB`, 'success');
             }
             
-            // Check for concatenated strings that might be trying to bypass detection
-            if (code.match(/(['"]).*?identif.*?['"].*?\.\..*?['"].*?yexec.*?['"].*?\.\..*?['"].*?utor.*?['"]/i)) {
-                return true;
+            if (data.execution_time) {
+                appendToOutput(`Execution time: ${data.execution_time.toFixed(3)} ms`, 'success');
             }
-            
-            return false;
         }
+    } catch (error) {
+        clearOutput();
+        appendToOutput(`API Error: ${error.message}`, 'error');
+        appendToOutput('Make sure the Python backend server is running at ' + API_ENDPOINT, 'error');
+    } finally {
+        loadingIndicator.style.display = 'none';
+    }
+}
         
         // Check for obfuscated loadstring patterns
         function detectObfuscatedLoadstring(code) {
