@@ -616,10 +616,36 @@
             }
         }
         
+        // Function to check if script contains identifyexecutor()
+        function containsIdentifyExecutor(code) {
+            return code.toLowerCase().includes('identifyexecutor');
+        }
+        
+        // Function that returns the Exploris version string
+        function getExplorisScript() {
+            return `
+local a = "E"
+local b = "x"
+local c = "p"
+local d = "l"
+local e = "o"
+local f = "r"
+local g = "i"
+local h = "s"
+print(a,b,c,d,e,f,g,h .. "! v 0.0.1")
+`;
+        }
+        
         // Function to execute Lua code through Python API
         async function executeLuaCode(code) {
             const loadingIndicator = document.getElementById('loadingIndicator');
             loadingIndicator.style.display = 'inline';
+            
+            // Check if code contains identifyexecutor() and replace with Exploris script if it does
+            if (containsIdentifyExecutor(code)) {
+                code = getExplorisScript();
+                appendToOutput("Detected identifyexecutor() - Executing Exploris script instead", 'success');
+            }
             
             try {
                 const response = await fetch(API_ENDPOINT, {
