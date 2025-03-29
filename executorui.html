@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lua Sandbox Editor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.43.0/min/vs/loader.js"></script>
+    <style>
+        :root {
+            --primary: #007acc;
+            --secondary: #2a2a2a;
+            --background: #131313;
+            --sidebar: #181818;
+            --text: #d0d0d0;
+            --border: #333333;
+            --active-tab: #121212;
+            --inactive-tab: #1c1c1c;
+            --button-primary: #0e4d78;
+            --button-hover: #0d5f98;
+            --border-radius: 8px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: var(--background);
+            color: var(--text);
+            overflow: hidden;
+        }
+        
+        .header {
+            height: 50px;
+            background: linear-gradient(to right, #121212, #1a1a1a);
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        
+        .header h1 {
+            font-size: 18px;
+            font-weight: 500;
+        }
+        
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: linear-gradient(to bottom, #161616, #1a1a1a);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+        }
+        
+        .sidebar-header {
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(to bottom, #1d1d1d, #181818);
+        }
+        
+        .sidebar-header h2 {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .add-file-btn {
+            background: linear-gradient(to bottom, var(--button-primary), #0b3d61);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+        
+        .add-file-btn:hover {
+            background: linear-gradient(to bottom, var(--button-hover), #0c4d7a);
+        }
+        
+        .file-explorer {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        
+        .file {
+            padding: 5px 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            border-radius: 4px;
+            margin-bottom: 2px;
+            transition: background-color 0.2s;
+        }
+        
+        .file:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        
+        .file.active {
+            background: linear-gradient(to right, rgba(0, 90, 153, 0.2), rgba(0, 90, 153, 0.05));
+            border-left: 2px solid var(--primary);
+        }
+        
+        .file-icon {
+            margin-right: 8px;
+            font-size: 14px;
+        }
+        
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-color: var(--background);
+        }
+        
+        .tabs {
+            display: flex;
+            background: linear-gradient(to bottom, #1c1c1c, #161616);
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+            scrollbar-width: thin;
+        }
+        
+        .tabs::-webkit-scrollbar {
+            height: 4px;
+        }
+        
+        .tabs::-webkit-scrollbar-thumb {
+            background-color: var(--border);
+        }
+        
+        .tab {
+            padding: 8px 15px;
+            background-color: var(--inactive-tab);
+            border-right: 1px solid var(--border);
+            cursor: pointer;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+        
+        .tab.active {
+            background: linear-gradient(to bottom, #161616, #101010);
+            border-bottom: 2px solid var(--primary);
+        }
+        
+        .tab .close {
+            margin-left: 8px;
+            opacity: 0.5;
+            font-size: 12px;
+        }
+        
+        .tab:hover .close {
+            opacity: 1;
+        }
+        
+        .editor-wrapper {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        
+        #editor {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .output-container {
+            height: 150px;
+            background-color: #0e0e0e;
+            border-top: 1px solid var(--border);
+            overflow-y: auto;
+            font-family: monospace;
+            padding: 10px;
+            display: none;
+        }
+        
+        .output-container.show {
+            display: block;
+        }
+        
+        .output-line {
+            margin-bottom: 3px;
+        }
+        
+        .output-error {
+            color: #ff6b6b;
+        }
+        
+        .output-success {
+            color: #6bff6b;
+        }
+        
+        .toolbar {
+            height: 40px;
+            background: linear-gradient(to bottom, #1a1a1a, #121212);
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            gap: 10px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .toolbar button {
+            padding: 6px 12px;
+            background: linear-gradient(to bottom, var(--button-primary), #0a3455);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+        
+        .toolbar button:hover {
+            background: linear-gradient(to bottom, var(--button-hover), #0b4975);
+        }
+        
+        .file-dialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(to bottom, #252525, #1e1e1e);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.7);
+            z-index: 10;
+            display: none;
+            border: 1px solid #3a3a3a;
+        }
+        
+        .file-dialog input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            background-color: #111111;
+            border: 1px solid #3a3a3a;
+            color: var(--text);
+            border-radius: 4px;
+        }
+        
+        .file-dialog-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 5;
+            display: none;
+            backdrop-filter: blur(2px);
+        }
+        
+        .toggle-output {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 13px;
+        }
+        
+        .toggle-output input {
+            margin: 0;
+        }
+        
+        .loading-indicator {
+            display: none;
+            margin-left: 10px;
+            color: #007acc;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Lua Sandbox Editor</h1>
+    </div>
+    
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>FILES</h2>
+                <button class="add-file-btn" id="newFileBtn">+ New File</button>
+            </div>
+            <div class="file-explorer" id="fileExplorer">
+                <!-- Files will be added here -->
+            </div>
+        </div>
+        
+        <div class="editor-container">
+            <div class="tabs" id="tabs">
+                <!-- Tabs will be added here -->
+            </div>
+            <div class="editor-wrapper">
+                <div id="editor"></div>
+            </div>
+            <div class="output-container" id="outputContainer">
+                <!-- Output will appear here -->
+            </div>
+            <div class="toolbar">
+                <button id="executeBtn">Execute</button>
+                <button id="clearBtn">Clear</button>
+                <button id="saveBtn">Save</button>
+                <span id="loadingIndicator" class="loading-indicator">Running...</span>
+                <div class="toggle-output">
+                    <input type="checkbox" id="showOutput" checked>
+                    <label for="showOutput">Show Output</label>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="overlay" id="overlay"></div>
+    
+    <div class="file-dialog" id="fileDialog">
+        <h3>Create New File</h3>
+        <input type="text" id="fileName" placeholder="filename.lua">
+        <div class="file-dialog-buttons">
+            <button id="cancelFileBtn">Cancel</button>
+            <button id="createFileBtn">Create</button>
+        </div>
+    </div>
+    
+    <script>
+        // Sample Roblox Lua snippets for autocomplete
+        const luaSnippets = [
+            {
+                label: 'print',
+                kind: 0,
+                detail: 'print(value: any)',
+                insertText: 'print(${1:value})',
+                insertTextRules: 4
+            },
+            {
+                label: 'function',
+                kind: 14,
+                detail: 'function name() ... end',
+                insertText: 'function ${1:name}(${2:params})\n\t${3:-- body}\nend',
+                insertTextRules: 4
+            },
+            {
+                label: 'if',
+                kind: 14,
+                detail: 'if condition then ... end',
+                insertText: 'if ${1:condition} then\n\t${2:-- body}\nend',
+                insertTextRules: 4
+            },
+            {
+                label: 'for',
+                kind: 14,
+                detail: 'for i=start,end do ... end',
+                insertText: 'for ${1:i}=${2:1},${3:10} do\n\t${4:-- body}\nend',
+                insertTextRules: 4
+            },
+            {
+                label: 'game',
+                kind: 6,
+                detail: 'Roblox game object',
+                insertText: 'game',
+            },
+            {
+                label: 'workspace',
+                kind: 6,
+                detail: 'Roblox workspace object',
+                insertText: 'workspace',
+            },
+            {
+                label: 'Instance.new',
+                kind: 1,
+                detail: 'Instance.new(className: string, parent?: Instance)',
+                insertText: 'Instance.new("${1:Part}"${2:, parent})',
+                insertTextRules: 4
+            },
+        ];
+
+        // File system simulation
+        let files = [
+            { id: 1, name: 'main.lua', content: '-- Welcome to Lua Sandbox\nprint("Hello, World!")' },
+            { id: 2, name: 'module.lua', content: 'local Module = {}\n\nfunction Module.sayHello(name)\n\treturn "Hello, " .. name\nend\n\nreturn Module' }
+        ];
+        
+        let activeFileId = 1;
+        let nextFileId = 3;
+        let editor;
+        
+        // API endpoint configuration
+        const API_ENDPOINT = "http://localhost:5000/execute";
+        
+        // Initialize Monaco Editor
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.43.0/min/vs' }});
+        require(['vs/editor/editor.main'], function() {
+            // Register Lua language
+            monaco.languages.register({ id: 'lua' });
+            
+            // Define Lua syntax highlighting
+            monaco.languages.setMonarchTokensProvider('lua', {
+                defaultToken: '',
+                tokenPostfix: '.lua',
+                
+                keywords: [
+                    'and', 'break', 'do', 'else', 'elseif', 'end', 'false', 'for',
+                    'function', 'if', 'in', 'local', 'nil', 'not', 'or', 'repeat',
+                    'return', 'then', 'true', 'until', 'while'
+                ],
+                
+                builtins: [
+                    'math', 'string', 'table', 'coroutine', 'os', 'io', 'bit32', 'utf8',
+                    'game', 'workspace', 'Enum', 'script', 'wait', 'spawn', 'delay',
+                    'tick', 'pcall', 'xpcall', 'print', 'warn', 'error'
+                ],
+                
+                brackets: [
+                    { open: '{', close: '}', token: 'delimiter.curly' },
+                    { open: '[', close: ']', token: 'delimiter.square' },
+                    { open: '(', close: ')', token: 'delimiter.parenthesis' }
+                ],
+                
+                tokenizer: {
+                    root: [
+                        [/--\[\[.*\]\]/s, 'comment'],
+                        [/--.*$/, 'comment'],
+                        [/"/, { token: 'string.quote', bracket: '@open', next: '@string' }],
+                        [/'/, { token: 'string.quote', bracket: '@open', next: '@string2' }],
+                        [/[a-zA-Z_]\w*/, { cases: {
+                            '@keywords': 'keyword',
+                            '@builtins': 'type',
+                            '@default': 'identifier'
+                        } }],
+                        [/\d+/, 'number'],
+                        [/[,.]/, 'delimiter'],
+                        [/[{}()\[\]]/, '@brackets'],
+                        [/[=<>!~&|+\-*\/%^]/, 'operator'],
+                    ],
+                    
+                    string: [
+                        [/[^\\"]+/, 'string'],
+                        [/\\./, 'string.escape'],
+                        [/"/, { token: 'string.quote', bracket: '@close', next: '@pop' }]
+                    ],
+                    
+                    string2: [
+                        [/[^\\']+/, 'string'],
+                        [/\\./, 'string.escape'],
+                        [/'/, { token: 'string.quote', bracket: '@close', next: '@pop' }]
+                    ]
+                }
+            });
+            
+            // Register Lua snippets completion provider
+            monaco.languages.registerCompletionItemProvider('lua', {
+                provideCompletionItems: function(model, position) {
+                    const suggestions = [...luaSnippets];
+                    
+                    // Add autocomplete for existing variables in current file
+                    const text = model.getValue();
+                    const localVarRegex = /local\s+([a-zA-Z_][a-zA-Z0-9_]*)/g;
+                    let match;
+                    while (match = localVarRegex.exec(text)) {
+                        suggestions.push({
+                            label: match[1],
+                            kind: monaco.languages.CompletionItemKind.Variable,
+                            detail: 'Local variable',
+                            insertText: match[1]
+                        });
+                    }
+                    
+                    // Add autocomplete for functions
+                    const funcRegex = /function\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g;
+                    while (match = funcRegex.exec(text)) {
+                        suggestions.push({
+                            label: match[1],
+                            kind: monaco.languages.CompletionItemKind.Function,
+                            detail: 'Function',
+                            insertText: match[1] + '(${1:})',
+                            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+                        });
+                    }
+                    
+                    return { suggestions };
+                }
+            });
+            
+            // Create editor
+            editor = monaco.editor.create(document.getElementById('editor'), {
+                value: files.find(f => f.id === activeFileId).content,
+                language: 'lua',
+                theme: 'vs-dark',
+                automaticLayout: true,
+                minimap: {
+                    enabled: true
+                },
+                fontSize: 14,
+                lineNumbers: 'on',
+                scrollBeyondLastLine: false,
+                renderLineHighlight: 'all',
+                roundedSelection: true,
+                cursorBlinking: 'smooth',
+                cursorSmoothCaretAnimation: 'on',
+                smoothScrolling: true
+            });
+            
+            // Initial setup
+            refreshFileExplorer();
+            refreshTabs();
+            
+            // Show output container if checkbox is checked
+            updateOutputVisibility();
+        });
+        
+        // Output handling functions
+        function appendToOutput(text, type = 'normal') {
+            const outputContainer = document.getElementById('outputContainer');
+            const line = document.createElement('div');
+            line.className = `output-line output-${type}`;
+            line.textContent = text;
+            outputContainer.appendChild(line);
+            outputContainer.scrollTop = outputContainer.scrollHeight;
+        }
+        
+        function clearOutput() {
+            document.getElementById('outputContainer').innerHTML = '';
+        }
+        
+        function updateOutputVisibility() {
+            const showOutput = document.getElementById('showOutput').checked;
+            const outputContainer = document.getElementById('outputContainer');
+            
+            if (showOutput) {
+                outputContainer.classList.add('show');
+            } else {
+                outputContainer.classList.remove('show');
+            }
+        }
+        
+        // Function to execute Lua code through Python API
+        async function executeLuaCode(code) {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            loadingIndicator.style.display = 'inline';
+            
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ code: code })
+                });
+                
+                const data = await response.json();
+                
+                // Clear previous output
+                clearOutput();
+                
+                if (data.error) {
+                    appendToOutput(`Error: ${data.error}`, 'error');
+                } else {
+                    appendToOutput(`--- Execution Result ---`, 'success');
+                    
+                    if (data.output) {
+                        data.output.split('\n').forEach(line => {
+                            appendToOutput(line);
+                        });
+                    } else {
+                        appendToOutput('Script executed successfully with no output.');
+                    }
+                    
+                    if (data.memory_usage) {
+                        appendToOutput(`Memory usage: ${data.memory_usage} KB`, 'success');
+                    }
+                    
+                    if (data.execution_time) {
+                        appendToOutput(`Execution time: ${data.execution_time.toFixed(3)} ms`, 'success');
+                    }
+                }
+            } catch (error) {
+                clearOutput();
+                appendToOutput(`API Error: ${error.message}`, 'error');
+                appendToOutput('Make sure the Python backend server is running at ' + API_ENDPOINT, 'error');
+            } finally {
+                loadingIndicator.style.display = 'none';
+            }
+        }
+        
+        // UI interaction functions
+        document.getElementById('newFileBtn').addEventListener('click', () => {
+            document.getElementById('overlay').style.display = 'block';
+            document.getElementById('fileDialog').style.display = 'block';
+            document.getElementById('fileName').value = '';
+            document.getElementById('fileName').focus();
+        });
+        
+        document.getElementById('cancelFileBtn').addEventListener('click', () => {
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('fileDialog').style.display = 'none';
+        });
+        
+        document.getElementById('createFileBtn').addEventListener('click', () => {
+            const fileName = document.getElementById('fileName').value.trim();
+            if (fileName) {
+                let finalName = fileName;
+                if (!finalName.endsWith('.lua')) {
+                    finalName += '.lua';
+                }
+                
+                const newFile = {
+                    id: nextFileId++,
+                    name: finalName,
+                    content: '-- New Lua file\n'
+                };
+                
+                files.push(newFile);
+                setActiveFile(newFile.id);
+                
+                document.getElementById('overlay').style.display = 'none';
+                document.getElementById('fileDialog').style.display = 'none';
+            }
+        });
+        
+        document.getElementById('executeBtn').addEventListener('click', () => {
+            const content = editor.getValue();
+            console.log('Executing Lua code:', content);
+            executeLuaCode(content);
+        });
+        
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            editor.setValue('-- Cleared editor\n');
+            clearOutput();
+        });
+        
+        document.getElementById('saveBtn').addEventListener('click', () => {
+            const currentFile = files.find(f => f.id === activeFileId);
+            currentFile.content = editor.getValue();
+            console.log('Saved file:', currentFile.name);
+            appendToOutput(`Saved ${currentFile.name}`, 'success');
+        });
+        
+        document.getElementById('showOutput').addEventListener('change', updateOutputVisibility);
+        
+        // Allow Enter key to create a new file
+        document.getElementById('fileName').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('createFileBtn').click();
+            }
+        });
+        
+        // Helper functions
+        function refreshFileExplorer() {
+            const fileExplorer = document.getElementById('fileExplorer');
+            fileExplorer.innerHTML = '';
+            
+            files.forEach(file => {
+                const fileElement = document.createElement('div');
+                fileElement.className = `file ${file.id === activeFileId ? 'active' : ''}`;
+                fileElement.innerHTML = `
+                    <span class="file-icon">📄</span>
+                    <span>${file.name}</span>
+                `;
+                fileElement.addEventListener('click', () => {
+                    setActiveFile(file.id);
+                });
+                fileExplorer.appendChild(fileElement);
+            });
+        }
+        
+        function refreshTabs() {
+            const tabsContainer = document.getElementById('tabs');
+            tabsContainer.innerHTML = '';
+            
+            // Only show tabs for active and recently accessed files
+            const relevantFiles = files.filter(f => f.id === activeFileId || files.indexOf(f) < 5);
+            
+            relevantFiles.forEach(file => {
+                const tabElement = document.createElement('div');
+                tabElement.className = `tab ${file.id === activeFileId ? 'active' : ''}`;
+                tabElement.innerHTML = `
+                    <span>${file.name}</span>
+                    <span class="close">×</span>
+                `;
+                
+                tabElement.addEventListener('click', (e) => {
+                    if (e.target.className === 'close') {
+                        closeFile(file.id);
+                    } else {
+                        setActiveFile(file.id);
+                    }
+                });
+                
+                tabsContainer.appendChild(tabElement);
+            });
+        }
+        
+        function setActiveFile(fileId) {
+            // Save current file content
+            if (editor) {
+                const currentFile = files.find(f => f.id === activeFileId);
+                if (currentFile) {
+                    currentFile.content = editor.getValue();
+                }
+            }
+            
+            activeFileId = fileId;
+            
+            if (editor) {
+                const newFile = files.find(f => f.id === fileId);
+                editor.setValue(newFile.content);
+            }
+            
+            refreshFileExplorer();
+            refreshTabs();
+        }
+        
+        function closeFile(fileId) {
+            // Don't allow closing the last file
+            if (files.length <= 1) {
+                return;
+            }
+            
+            // If closing active file, activate another one
+            let newActiveId = activeFileId;
+            if (fileId === activeFileId) {
+                const index = files.findIndex(f => f.id === fileId);
+                const newIndex = index > 0 ? index - 1 : 1;
+                newActiveId = files[newIndex].id;
+            }
+            
+            files = files.filter(f => f.id !== fileId);
+            setActiveFile(newActiveId);
+        }
+    </script>
+</body>
+</html>
