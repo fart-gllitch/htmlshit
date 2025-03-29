@@ -34,6 +34,13 @@
             background-color: var(--background);
             color: var(--text);
             overflow: hidden;
+            -webkit-app-region: drag; /* This makes the entire window draggable by default */
+        }
+        
+        /* Make interactive elements not draggable */
+        button, input, select, textarea, .file, .tab, #editor, 
+        .monaco-editor, .monaco-editor *, .editor-wrapper * {
+            -webkit-app-region: no-drag;
         }
         
         .header {
@@ -251,6 +258,7 @@
             z-index: 10;
             display: none;
             border: 1px solid #3a3a3a;
+            -webkit-app-region: no-drag; /* Ensure dialog is not draggable */
         }
         
         .file-dialog input {
@@ -305,11 +313,51 @@
             50% { opacity: 1; }
             100% { opacity: 0.5; }
         }
+
+        /* Custom window controls */
+        .window-controls {
+            margin-left: auto;
+            display: flex;
+            gap: 8px;
+        }
+
+        .window-control-button {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-app-region: no-drag;
+        }
+
+        .minimize-button {
+            background-color: #FFBD44;
+        }
+
+        .maximize-button {
+            background-color: #00CA4E;
+        }
+
+        .close-button {
+            background-color: #FF605C;
+        }
+
+        .window-control-button:hover {
+            filter: brightness(1.1);
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>Lua Sandbox Editor</h1>
+        <!-- Custom window controls -->
+        <div class="window-controls">
+            <div class="window-control-button minimize-button" id="minimizeBtn"></div>
+            <div class="window-control-button maximize-button" id="maximizeBtn"></div>
+            <div class="window-control-button close-button" id="closeBtn"></div>
+        </div>
     </div>
     
     <div class="main-container">
