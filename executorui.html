@@ -455,6 +455,20 @@
                 insertText: 'Instance.new("${1:Part}"${2:, parent})',
                 insertTextRules: 4
             },
+            {
+                label: 'loadstring',
+                kind: 1,
+                detail: 'loadstring(code: string)',
+                insertText: 'loadstring(${1:code})()',
+                insertTextRules: 4
+            },
+            {
+                label: 'identifyexecutor',
+                kind: 1,
+                detail: 'identifyexecutor()',
+                insertText: 'identifyexecutor()',
+                insertTextRules: 4
+            },
         ];
 
         // File system simulation
@@ -490,7 +504,8 @@
                 builtins: [
                     'math', 'string', 'table', 'coroutine', 'os', 'io', 'bit32', 'utf8',
                     'game', 'workspace', 'Enum', 'script', 'wait', 'spawn', 'delay',
-                    'tick', 'pcall', 'xpcall', 'print', 'warn', 'error'
+                    'tick', 'pcall', 'xpcall', 'print', 'warn', 'error', 'loadstring', 
+                    'identifyexecutor'
                 ],
                 
                 brackets: [
@@ -614,11 +629,6 @@
             } else {
                 outputContainer.classList.remove('show');
             }
-        }
-        
-        // Function to check if script contains identifyexecutor()
-        function containsIdentifyExecutor(code) {
-            return code.toLowerCase().includes('identifyexecutor');
         }
         
         // Function that returns the Exploris version string
