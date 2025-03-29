@@ -482,243 +482,791 @@
     </div>
     
     <script>
-        // Initialize Monaco Editor
-        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.43.0/min/vs' }});
-        require(['vs/editor/editor.main'], function() {
-            // Register Lua language
-            monaco.languages.register({ id: 'lua' });
+// Initialize Monaco Editor
+require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.43.0/min/vs' }});
+require(['vs/editor/editor.main'], function() {
+    // Register Lua language
+    monaco.languages.register({ id: 'lua' });
+    
+    // Define Lua syntax highlighting
+    monaco.languages.setMonarchTokensProvider('lua', {
+        defaultToken: '',
+        tokenPostfix: '.lua',
+        
+        keywords: [
+            'and', 'break', 'do', 'else', 'elseif', 'end', 'false', 'for',
+            'function', 'if', 'in', 'local', 'nil', 'not', 'or', 'repeat',
+            'return', 'then', 'true', 'until', 'while'
+        ],
+        
+        builtins: [
+            'math', 'string', 'table', 'coroutine', 'os', 'io', 'bit32', 'utf8',
+            'game', 'workspace', 'Enum', 'script', 'wait', 'spawn', 'delay',
+            'tick', 'pcall', 'xpcall', 'print', 'warn', 'error'
+        ],
+        
+        brackets: [
+            { open: '{', close: '}', token: 'delimiter.curly' },
+            { open: '[', close: ']', token: 'delimiter.square' },
+            { open: '(', close: ')', token: 'delimiter.parenthesis' }
+        ],
+        
+        tokenizer: {
+            root: [
+                [/--\[\[.*\]\]/s, 'comment'],
+                [/--.*$/, 'comment'],
+                [/"/, { token: 'string.quote', bracket: '@open', next: '@string' }],
+                [/'/, { token: 'string.quote', bracket: '@open', next: '@string2' }],
+                [/[a-zA-Z_]\w*/, { cases: {
+                    '@keywords': 'keyword',
+                    '@builtins': 'type',
+                    '@default': 'identifier'
+                } }],
+                [/\d+/, 'number'],
+                [/[,.]/, 'delimiter'],
+                [/[{}()\[\]]/, '@brackets'],
+                [/[=<>!~&|+\-*\/%^]/, 'operator'],
+            ],
             
-            // Define Lua syntax highlighting
-            monaco.languages.setMonarchTokensProvider('lua', {
-                defaultToken: '',
-                tokenPostfix: '.lua',
-                
-                keywords: [
-                    'and', 'break', 'do', 'else', 'elseif', 'end', 'false', 'for',
-                    'function', 'if', 'in', 'local', 'nil', 'not', 'or', 'repeat',
-                    'return', 'then', 'true', 'until', 'while'
-                ],
-                
-                builtins: [
-                    'math', 'string', 'table', 'coroutine', 'os', 'io', 'bit32', 'utf8',
-                    'game', 'workspace', 'Enum', 'script', 'wait', 'spawn', 'delay',
-                    'tick', 'pcall', 'xpcall', 'print', 'warn', 'error'
-                ],
-                
-                brackets: [
-                    { open: '{', close: '}', token: 'delimiter.curly' },
-                    { open: '[', close: ']', token: 'delimiter.square' },
-                    { open: '(', close: ')', token: 'delimiter.parenthesis' }
-                ],
-                
-                tokenizer: {
-                    root: [
-                        [/--\[\[.*\]\]/s, 'comment'],
-                        [/--.*$/, 'comment'],
-                        [/"/, { token: 'string.quote', bracket: '@open', next: '@string' }],
-                        [/'/, { token: 'string.quote', bracket: '@open', next: '@string2' }],
-                        [/[a-zA-Z_]\w*/, { cases: {
-                            '@keywords': 'keyword',
-                            '@builtins': 'type',
-                            '@default': 'identifier'
-                        } }],
-                        [/\d+/, 'number'],
-                        [/[,.]/, 'delimiter'],
-                        [/[{}()\[\]]/, '@brackets'],
-                        [/[=<>!~&|+\-*\/%^]/, 'operator'],
-                    ],
-                    
-                    string: [
-                        [/[^\\"]+/, 'string'],
-                        [/\\./, 'string.escape'],
-                        [/"/, { token: 'string.quote', bracket: '@close', next: '@pop' }]
-                    ],
-                    
-                    string2: [
-                        [/[^\\']+/, 'string'],
-                        [/\\./, 'string.escape'],
-                        [/'/, { token: 'string.quote', bracket: '@close', next: '@pop' }]
-                    ]
-                }
-            });
-
-            async function executeLuaCode(code) {
-            const loadingIndicator = document.getElementById('loadingIndicator');
-            loadingIndicator.style.display = 'inline';
+            string: [
+                [/[^\\"]+/, 'string'],
+                [/\\./, 'string.escape'],
+                [/"/, { token: 'string.quote', bracket: '@close', next: '@pop' }]
+            ],
             
-            try {
-                const response = await fetch(API_ENDPOINT, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ code: code })
+            string2: [
+                [/[^\\']+/, 'string'],
+                [/\\./, 'string.escape'],
+                [/'/, { token: 'string.quote', bracket: '@close', next: '@pop' }]
+            ]
+        }
+    });
+    
+    // File system implementation
+    const fileSystem = {
+        files: {
+            'Infinite Yield.txt': '-- Infinite Yield Script\n\nprint("Infinite Yield loaded")\n\nlocal InfiniteYield = {}\n\nfunction InfiniteYield:Init()\n    print("Initializing Infinite Yield...")\n    -- Implementation goes here\nend\n\nInfiniteYield:Init()',
+            'Dex Explorer.txt': '-- Dex Explorer Script\n\nprint("Dex Explorer loaded")\n\nlocal DexExplorer = {}\n\nfunction DexExplorer:Init()\n    print("Initializing Dex Explorer...")\n    -- Implementation goes here\nend\n\nDexExplorer:Init()'
+        },
+        favorites: {},
+        activeFile: null,
+        
+        createFile: function(name, content = '') {
+            if (this.files[name]) {
+                return { success: false, message: 'File already exists' };
+            }
+            
+            this.files[name] = content || '-- New file: ' + name + '\n';
+            return { success: true, message: 'File created successfully' };
+        },
+        
+        openFile: function(name) {
+            if (!this.files[name]) {
+                return { success: false, message: 'File does not exist' };
+            }
+            
+            this.activeFile = name;
+            return { 
+                success: true, 
+                content: this.files[name],
+                message: 'File opened successfully' 
+            };
+        },
+        
+        saveFile: function(name, content) {
+            this.files[name] = content;
+            return { success: true, message: 'File saved successfully' };
+        },
+        
+        deleteFile: function(name) {
+            if (!this.files[name]) {
+                return { success: false, message: 'File does not exist' };
+            }
+            
+            delete this.files[name];
+            if (this.activeFile === name) {
+                this.activeFile = null;
+            }
+            
+            return { success: true, message: 'File deleted successfully' };
+        },
+        
+        renameFile: function(oldName, newName) {
+            if (!this.files[oldName]) {
+                return { success: false, message: 'File does not exist' };
+            }
+            
+            if (this.files[newName]) {
+                return { success: false, message: 'A file with that name already exists' };
+            }
+            
+            this.files[newName] = this.files[oldName];
+            delete this.files[oldName];
+            
+            if (this.activeFile === oldName) {
+                this.activeFile = newName;
+            }
+            
+            return { success: true, message: 'File renamed successfully' };
+        },
+        
+        addToFavorites: function(name) {
+            if (!this.files[name]) {
+                return { success: false, message: 'File does not exist' };
+            }
+            
+            this.favorites[name] = true;
+            return { success: true, message: 'Added to favorites' };
+        },
+        
+        removeFromFavorites: function(name) {
+            if (!this.favorites[name]) {
+                return { success: false, message: 'File is not in favorites' };
+            }
+            
+            delete this.favorites[name];
+            return { success: true, message: 'Removed from favorites' };
+        },
+        
+        getFileList: function() {
+            return Object.keys(this.files);
+        },
+        
+        getFavoritesList: function() {
+            return Object.keys(this.favorites);
+        }
+    };
+    
+    // Create editor with AWP.GG-like dark theme
+    const editor = monaco.editor.create(document.getElementById('editor'), {
+        value: "-- Welcome to AWP.GG!\n\nprint(\"Hello, World!\")",
+        language: 'lua',
+        theme: 'vs-dark',
+        automaticLayout: true,
+        fontFamily: "'Consolas', 'Courier New', monospace",
+        fontSize: 14,
+        lineNumbers: 'on',
+        scrollBeyondLastLine: false,
+        minimap: {
+            enabled: true,
+            scale: 1,
+            showSlider: "mouseover"
+        },
+        renderLineHighlight: 'all',
+        selectOnLineNumbers: true,
+        cursorBlinking: 'blink',
+    });
+    
+    // Tab management
+    const tabManager = {
+        tabs: [],
+        activeTabIndex: 0,
+        
+        init: function() {
+            this.refreshTabsUI();
+        },
+        
+        createTab: function(fileName, content) {
+            const tabIndex = this.tabs.findIndex(tab => tab.fileName === fileName);
+            
+            if (tabIndex !== -1) {
+                // Tab already exists, just activate it
+                this.setActiveTab(tabIndex);
+                return tabIndex;
+            }
+            
+            const newTab = {
+                fileName: fileName,
+                content: content,
+                model: monaco.editor.createModel(content, 'lua')
+            };
+            
+            this.tabs.push(newTab);
+            const newIndex = this.tabs.length - 1;
+            this.setActiveTab(newIndex);
+            this.refreshTabsUI();
+            return newIndex;
+        },
+        
+        closeTab: function(index) {
+            if (index < 0 || index >= this.tabs.length) return;
+            
+            this.tabs[index].model.dispose();
+            this.tabs.splice(index, 1);
+            
+            // Update active tab if necessary
+            if (this.tabs.length === 0) {
+                // Create a new untitled tab
+                this.createTab('Untitled', '-- New script\n');
+            } else if (index <= this.activeTabIndex) {
+                this.setActiveTab(Math.max(0, this.activeTabIndex - 1));
+            }
+            
+            this.refreshTabsUI();
+        },
+        
+        setActiveTab: function(index) {
+            if (index < 0 || index >= this.tabs.length) return;
+            
+            this.activeTabIndex = index;
+            editor.setModel(this.tabs[index].model);
+            this.refreshTabsUI();
+        },
+        
+        getActiveTab: function() {
+            if (this.tabs.length === 0) return null;
+            return this.tabs[this.activeTabIndex];
+        },
+        
+        refreshTabsUI: function() {
+            const tabsContainer = document.querySelector('.tabs');
+            tabsContainer.innerHTML = '';
+            
+            this.tabs.forEach((tab, index) => {
+                const tabElement = document.createElement('div');
+                tabElement.className = 'tab' + (index === this.activeTabIndex ? ' active' : '');
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = tab.fileName;
+                
+                const closeSpan = document.createElement('span');
+                closeSpan.className = 'close-icon';
+                closeSpan.textContent = '×';
+                closeSpan.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.closeTab(index);
                 });
                 
-                const data = await response.json();
+                tabElement.appendChild(nameSpan);
+                tabElement.appendChild(closeSpan);
                 
-                // Clear previous output
-                clearOutput();
+                tabElement.addEventListener('click', () => {
+                    this.setActiveTab(index);
+                });
                 
-                if (data.error) {
-                    appendToOutput(`Error: ${data.error}`, 'error');
+                tabsContainer.appendChild(tabElement);
+            });
+            
+            // Add a "+" button to create a new tab
+            if (this.tabs.length > 0) {
+                const newTabBtn = document.createElement('div');
+                newTabBtn.className = 'tab new-tab';
+                newTabBtn.textContent = '+';
+                newTabBtn.addEventListener('click', () => {
+                    const untitledCount = this.tabs.filter(tab => tab.fileName.startsWith('Untitled')).length;
+                    let newName = 'Untitled';
+                    if (untitledCount > 0) {
+                        newName += ` (${untitledCount + 1})`;
+                    }
+                    this.createTab(newName, '-- New script\n');
+                });
+                tabsContainer.appendChild(newTabBtn);
+            }
+        },
+        
+        getCurrentContent: function() {
+            if (this.tabs.length === 0) return '';
+            return editor.getValue();
+        },
+        
+        getCurrentFileName: function() {
+            if (this.tabs.length === 0) return null;
+            return this.tabs[this.activeTabIndex].fileName;
+        },
+        
+        updateCurrentTab: function() {
+            if (this.tabs.length === 0) return;
+            this.tabs[this.activeTabIndex].content = editor.getValue();
+        }
+    };
+    
+    // Initialize with a new tab
+    tabManager.createTab('Untitled', '-- Welcome to AWP.GG!\n\nprint("Hello, World!")');
+    
+    // Update the file list UI
+    function updateFileList() {
+        const fileList = fileSystem.getFileList();
+        const fileContainer = document.querySelector('.sidebar-section:first-child .sidebar-content');
+        fileContainer.innerHTML = '';
+        
+        fileList.forEach(fileName => {
+            const fileElement = document.createElement('div');
+            fileElement.className = 'file-item';
+            if (fileSystem.activeFile === fileName) {
+                fileElement.classList.add('active');
+            }
+            
+            const iconSpan = document.createElement('span');
+            iconSpan.className = 'file-icon';
+            iconSpan.textContent = '📄';
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = fileName;
+            
+            fileElement.appendChild(iconSpan);
+            fileElement.appendChild(nameSpan);
+            
+            fileElement.addEventListener('click', () => {
+                const result = fileSystem.openFile(fileName);
+                if (result.success) {
+                    tabManager.createTab(fileName, result.content);
+                    fileSystem.activeFile = fileName;
+                    updateFileList();
                 } else {
-                    appendToOutput(`--- Execution Result ---`, 'success');
-                    
-                    if (data.output) {
-                        data.output.split('\n').forEach(line => {
-                            appendToOutput(line);
-                        });
-                    } else {
-                        appendToOutput('Script executed successfully with no output.');
-                    }
-                    
-                    if (data.memory_usage) {
-                        appendToOutput(`Memory usage: ${data.memory_usage} KB`, 'success');
-                    }
-                    
-                    if (data.execution_time) {
-                        appendToOutput(`Execution time: ${data.execution_time.toFixed(3)} ms`, 'success');
-                    }
+                    appendToConsole(result.message, 'error');
                 }
-            } catch (error) {
-                clearOutput();
-                appendToOutput(`API Error: ${error.message}`, 'error');
-                appendToOutput('Make sure the Python backend server is running at ' + API_ENDPOINT, 'error');
-            } finally {
-                loadingIndicator.style.display = 'none';
+            });
+            
+            fileElement.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                showContextMenu(e, [
+                    { 
+                        label: 'Open', 
+                        action: () => {
+                            const result = fileSystem.openFile(fileName);
+                            if (result.success) {
+                                tabManager.createTab(fileName, result.content);
+                            }
+                        }
+                    },
+                    { 
+                        label: 'Rename', 
+                        action: () => showRenameDialog(fileName) 
+                    },
+                    { 
+                        label: 'Delete', 
+                        action: () => {
+                            if (confirm(`Are you sure you want to delete "${fileName}"?`)) {
+                                const result = fileSystem.deleteFile(fileName);
+                                if (result.success) {
+                                    updateFileList();
+                                    appendToConsole(result.message, 'success');
+                                } else {
+                                    appendToConsole(result.message, 'error');
+                                }
+                            }
+                        }
+                    },
+                    {
+                        label: fileSystem.favorites[fileName] ? 'Remove from Favorites' : 'Add to Favorites',
+                        action: () => {
+                            const result = fileSystem.favorites[fileName] 
+                                ? fileSystem.removeFromFavorites(fileName)
+                                : fileSystem.addToFavorites(fileName);
+                            
+                            if (result.success) {
+                                updateFavoritesList();
+                                appendToConsole(result.message, 'success');
+                            }
+                        }
+                    }
+                ]);
+            });
+            
+            fileContainer.appendChild(fileElement);
+        });
+    }
+    
+    // Update the favorites list UI
+    function updateFavoritesList() {
+        const favoritesList = fileSystem.getFavoritesList();
+        const favoritesContainer = document.querySelector('.sidebar-section:nth-child(2) .sidebar-content');
+        favoritesContainer.innerHTML = '';
+        
+        if (favoritesList.length === 0) {
+            const emptyMessage = document.createElement('div');
+            emptyMessage.className = 'file-item empty-message';
+            emptyMessage.textContent = 'No favorites yet';
+            emptyMessage.style.opacity = '0.7';
+            emptyMessage.style.fontStyle = 'italic';
+            favoritesContainer.appendChild(emptyMessage);
+            return;
+        }
+        
+        favoritesList.forEach(fileName => {
+            const fileElement = document.createElement('div');
+            fileElement.className = 'file-item';
+            
+            const iconSpan = document.createElement('span');
+            iconSpan.className = 'file-icon';
+            iconSpan.textContent = '⭐';
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = fileName;
+            
+            fileElement.appendChild(iconSpan);
+            fileElement.appendChild(nameSpan);
+            
+            fileElement.addEventListener('click', () => {
+                const result = fileSystem.openFile(fileName);
+                if (result.success) {
+                    tabManager.createTab(fileName, result.content);
+                }
+            });
+            
+            favoritesContainer.appendChild(fileElement);
+        });
+    }
+    
+    // Context menu
+    function showContextMenu(event, items) {
+        const existingMenu = document.getElementById('context-menu');
+        if (existingMenu) {
+            existingMenu.remove();
+        }
+        
+        const contextMenu = document.createElement('div');
+        contextMenu.id = 'context-menu';
+        contextMenu.style.position = 'absolute';
+        contextMenu.style.left = `${event.clientX}px`;
+        contextMenu.style.top = `${event.clientY}px`;
+        contextMenu.style.backgroundColor = '#252525';
+        contextMenu.style.border = '1px solid #444';
+        contextMenu.style.borderRadius = '3px';
+        contextMenu.style.padding = '5px 0';
+        contextMenu.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.5)';
+        contextMenu.style.zIndex = '1000';
+        
+        items.forEach(item => {
+            const menuItem = document.createElement('div');
+            menuItem.textContent = item.label;
+            menuItem.style.padding = '5px 15px';
+            menuItem.style.cursor = 'pointer';
+            menuItem.style.fontSize = '13px';
+            
+            menuItem.addEventListener('mouseover', () => {
+                menuItem.style.backgroundColor = '#333';
+            });
+            
+            menuItem.addEventListener('mouseout', () => {
+                menuItem.style.backgroundColor = 'transparent';
+            });
+            
+            menuItem.addEventListener('click', () => {
+                contextMenu.remove();
+                item.action();
+            });
+            
+            contextMenu.appendChild(menuItem);
+        });
+        
+        document.body.appendChild(contextMenu);
+        
+        // Close context menu when clicking outside
+        document.addEventListener('click', function closeMenu() {
+            contextMenu.remove();
+            document.removeEventListener('click', closeMenu);
+        });
+    }
+    
+    // File dialogs
+    function showNewFileDialog() {
+        const overlay = document.getElementById('overlay');
+        const fileDialog = document.getElementById('fileDialog');
+        const fileNameInput = document.getElementById('fileName');
+        
+        overlay.style.display = 'block';
+        fileDialog.style.display = 'block';
+        fileNameInput.value = '';
+        fileNameInput.focus();
+    }
+    
+    function showRenameDialog(oldName) {
+        const overlay = document.getElementById('overlay');
+        const fileDialog = document.getElementById('fileDialog');
+        const fileNameInput = document.getElementById('fileName');
+        const dialogTitle = fileDialog.querySelector('h3');
+        
+        dialogTitle.textContent = 'Rename File';
+        overlay.style.display = 'block';
+        fileDialog.style.display = 'block';
+        fileNameInput.value = oldName;
+        fileNameInput.focus();
+        fileNameInput.select();
+        
+        // Save reference to old name for rename operation
+        fileDialog.dataset.oldName = oldName;
+        
+        // Change button text
+        document.getElementById('createBtn').textContent = 'Rename';
+    }
+    
+    function closeFileDialog() {
+        const overlay = document.getElementById('overlay');
+        const fileDialog = document.getElementById('fileDialog');
+        const dialogTitle = fileDialog.querySelector('h3');
+        
+        overlay.style.display = 'none';
+        fileDialog.style.display = 'none';
+        
+        // Reset dialog to default new file state
+        dialogTitle.textContent = 'New Lua File';
+        delete fileDialog.dataset.oldName;
+        document.getElementById('createBtn').textContent = 'Create';
+    }
+    
+    // Console functions
+    function appendToConsole(message, type = 'normal') {
+        const consoleOutput = document.getElementById('consoleOutput');
+        const timestamp = getCurrentTimestamp();
+        
+        const line = document.createElement('div');
+        line.className = 'console-line';
+        
+        const timeElement = document.createElement('span');
+        timeElement.className = 'console-timestamp';
+        timeElement.textContent = timestamp;
+        
+        const messageElement = document.createElement('span');
+        if (type === 'error') {
+            messageElement.className = 'console-error';
+        } else if (type === 'success') {
+            messageElement.style.color = '#6bff6b';
+        }
+        messageElement.textContent = message;
+        
+        line.appendChild(timeElement);
+        line.appendChild(messageElement);
+        
+        consoleOutput.appendChild(line);
+        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
+    
+    function clearConsole() {
+        document.getElementById('consoleOutput').innerHTML = '';
+    }
+    
+    function getCurrentTimestamp() {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        return `[${hours}:${minutes}:${seconds}]`;
+    }
+    
+    // Event listeners for console toggle
+    document.querySelector('.console-toggle').addEventListener('click', function() {
+        const consoleContainer = document.querySelector('.console-container');
+        if (consoleContainer.style.display === 'none') {
+            consoleContainer.style.display = 'flex';
+            this.textContent = '╳';
+        } else {
+            consoleContainer.style.display = 'none';
+            this.textContent = '▼';
+        }
+    });
+    
+    // Event listeners for sidebar headers (expand/collapse)
+    document.querySelectorAll('.sidebar-header').forEach(header => {
+        header.addEventListener('click', function() {
+            const content = this.nextElementSibling;
+            const arrow = this.querySelector('span:last-child');
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                arrow.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                arrow.textContent = '▶';
+            }
+        });
+    });
+    
+    // Event listeners for buttons
+    document.getElementById('executeBtn').addEventListener('click', function() {
+        executeCode();
+    });
+    
+    document.getElementById('executeBtn2').addEventListener('click', function() {
+        executeCode();
+    });
+    
+    document.getElementById('clearBtn').addEventListener('click', function() {
+        editor.setValue('-- Cleared editor\n');
+        clearConsole();
+    });
+    
+    document.getElementById('openBtn').addEventListener('click', function() {
+        showContextMenu({
+            clientX: this.getBoundingClientRect().left,
+            clientY: this.getBoundingClientRect().bottom
+        }, [
+            { label: 'New File', action: () => showNewFileDialog() }
+        ]);
+    });
+    
+    document.getElementById('saveBtn').addEventListener('click', function() {
+        // Get current file information
+        const currentTabInfo = tabManager.getActiveTab();
+        if (!currentTabInfo) return;
+        
+        tabManager.updateCurrentTab();
+        const content = currentTabInfo.content;
+        
+        if (currentTabInfo.fileName.startsWith('Untitled')) {
+            // If it's an untitled file, show save as dialog
+            showNewFileDialog();
+        } else {
+            // Save to existing file
+            const result = fileSystem.saveFile(currentTabInfo.fileName, content);
+            if (result.success) {
+                appendToConsole(result.message, 'success');
+                updateFileList();
+            } else {
+                appendToConsole(result.message, 'error');
             }
         }
+    });
+    
+    // Dialog buttons
+    document.getElementById('cancelBtn').addEventListener('click', function() {
+        closeFileDialog();
+    });
+    
+    document.getElementById('createBtn').addEventListener('click', function() {
+        const fileNameInput = document.getElementById('fileName');
+        const fileName = fileNameInput.value.trim();
+        const fileDialog = document.getElementById('fileDialog');
+        
+        if (!fileName) {
+            appendToConsole('Filename cannot be empty', 'error');
+            return;
+        }
+        
+        if (fileDialog.dataset.oldName) {
+            // Rename operation
+            const oldName = fileDialog.dataset.oldName;
+            const result = fileSystem.renameFile(oldName, fileName);
             
-            // Create editor with AWP.GG-like dark theme
-            const editor = monaco.editor.create(document.getElementById('editor'), {
-                value: "-- Welcome to AWP.GG!\n\nprint(\"Hello, World!\")",
-                language: 'lua',
-                theme: 'vs-dark',
-                automaticLayout: true,
-                fontFamily: "'Consolas', 'Courier New', monospace",
-                fontSize: 14,
-                lineNumbers: 'on',
-                scrollBeyondLastLine: false,
-                minimap: {
-                    enabled: true,
-                    scale: 1,
-                    showSlider: "mouseover"
-                },
-                renderLineHighlight: 'all',
-                selectOnLineNumbers: true,
-                cursorBlinking: 'blink',
-            });
-            
-            // Event Listeners
-            document.querySelector('.console-toggle').addEventListener('click', function() {
-                const consoleContainer = document.querySelector('.console-container');
-                if (consoleContainer.style.display === 'none') {
-                    consoleContainer.style.display = 'flex';
-                    this.textContent = '╳';
-                } else {
-                    consoleContainer.style.display = 'none';
-                    this.textContent = '▼';
+            if (result.success) {
+                // Update tab if it's open
+                const tabIndex = tabManager.tabs.findIndex(tab => tab.fileName === oldName);
+                if (tabIndex !== -1) {
+                    tabManager.tabs[tabIndex].fileName = fileName;
+                    tabManager.refreshTabsUI();
                 }
-            });
-            
-            document.getElementById('executeBtn').addEventListener('click', function() {
-                const code = editor.getValue();
-                console.log('Executing code:', code);
-                appendToConsole('Executing script...', 'normal');
-                executeLuaCode(content);
-                setTimeout(() => {
-                }, 500);
-            });
-            
-            document.getElementById('executeBtn2').addEventListener('click', function() {
-                const code = editor.getValue();
-                appendToConsole('Executing script...', 'normal');
-                setTimeout(() => {
-                    appendToConsole('Test is not a valid member of Model "Workspace.Part"', 'error');
-                }, 500);
-            });
-            
-            document.getElementById('clearBtn').addEventListener('click', function() {
-                editor.setValue('-- Cleared editor\n');
-                clearConsole();
-            });
-            
-            document.getElementById('saveBtn').addEventListener('click', function() {
-                appendToConsole('Script saved successfully', 'success');
-            });
-            
-            // Console functions
-            function appendToConsole(message, type = 'normal') {
-                const consoleOutput = document.getElementById('consoleOutput');
-                const timestamp = getCurrentTimestamp();
                 
-                const line = document.createElement('div');
-                line.className = 'console-line';
+                appendToConsole(result.message, 'success');
+                updateFileList();
+                updateFavoritesList();
+            } else {
+                appendToConsole(result.message, 'error');
+            }
+        } else {
+            // Create new file
+            const currentContent = tabManager.getCurrentContent();
+            const result = fileSystem.createFile(fileName, currentContent);
+            
+            if (result.success) {
+                appendToConsole(result.message, 'success');
+                updateFileList();
                 
-                const timeElement = document.createElement('span');
-                timeElement.className = 'console-timestamp';
-                timeElement.textContent = timestamp;
-                
-                const messageElement = document.createElement('span');
-                if (type === 'error') {
-                    messageElement.className = 'console-error';
-                } else if (type === 'success') {
-                    messageElement.style.color = '#6bff6b';
+                // Update the current tab to the new filename
+                if (tabManager.getActiveTab() && tabManager.getActiveTab().fileName.startsWith('Untitled')) {
+                    const activeTab = tabManager.tabs[tabManager.activeTabIndex];
+                    activeTab.fileName = fileName;
+                    tabManager.refreshTabsUI();
                 }
-                messageElement.textContent = message;
-                
-                line.appendChild(timeElement);
-                line.appendChild(messageElement);
-                
-                consoleOutput.appendChild(line);
-                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            } else {
+                appendToConsole(result.message, 'error');
             }
-            
-            function clearConsole() {
-                document.getElementById('consoleOutput').innerHTML = '';
-            }
-            
-            function getCurrentTimestamp() {
-                const now = new Date();
-                const hours = String(now.getHours()).padStart(2, '0');
-                const minutes = String(now.getMinutes()).padStart(2, '0');
-                const seconds = String(now.getSeconds()).padStart(2, '0');
-                return `[${hours}:${minutes}:${seconds}]`;
-            }
-            
-            // Tab interaction
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.addEventListener('click', function() {
-                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                    this.classList.add('active');
-                });
-                
-                const closeBtn = tab.querySelector('.close-icon');
-                if (closeBtn) {
-                    closeBtn.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                        if (document.querySelectorAll('.tab').length > 1) {
-                            tab.remove();
-                        }
-                    });
-                }
-            });
-            
-            // File interactions
-            document.querySelectorAll('.file-item').forEach(file => {
-                file.addEventListener('click', function() {
-                    document.querySelectorAll('.file-item').forEach(f => f.classList.remove('active'));
-                    this.classList.add('active');
-                    // Here you would normally load file content to editor
-                });
-            });
-            
-            // Initialize with a console message
+        }
+        
+        closeFileDialog();
+    });
+    
+    // Execute code function
+    function executeCode() {
+        const code = tabManager.getCurrentContent();
+        appendToConsole('Executing script...', 'normal');
+        
+        try {
+            // Simulate execution
             setTimeout(() => {
-                appendToConsole('Exploris ready', 'success');
-            }, 200);
-        });
+                if (code.includes('error') || code.includes('Error')) {
+                    appendToConsole('Error in script execution', 'error');
+                } else {
+                    appendToConsole('Script executed successfully', 'success');
+                }
+            }, 500);
+        } catch (err) {
+            appendToConsole('Error: ' + err.message, 'error');
+        }
+    }
+    
+    // Allow pressing Tab in the console
+    document.getElementById('consoleOutput').addEventListener('keydown', function(e) {
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            const start = this.selectionStart;
+            const end = this.selectionEnd;
+            
+            // Set textarea value to: text before caret + tab + text after caret
+            this.value = this.value.substring(0, start) + '\t' + this.value.substring(end);
+            
+            // Put caret at right position again
+            this.selectionStart = this.selectionEnd = start + 1;
+        }
+    });
+    
+    // Add Escape key listener to close dialogs
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeFileDialog();
+        }
+    });
+    
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+S to save
+        if (e.ctrlKey && e.key === 's') {
+            e.preventDefault();
+            document.getElementById('saveBtn').click();
+        }
+        
+        // Ctrl+N for new file
+        if (e.ctrlKey && e.key === 'n') {
+            e.preventDefault();
+            showNewFileDialog();
+        }
+        
+        // F5 to execute
+        if (e.key === 'F5') {
+            e.preventDefault();
+            executeCode();
+        }
+    });
+    
+    // Initialize file system UI
+    updateFileList();
+    updateFavoritesList();
+    
+    // Initialize with a welcome message
+    setTimeout(() => {
+        appendToConsole('AWP.GG ready', 'success');
+    }, 200);
+    
+    // Add CSS for context menu if it doesn't exist
+    if (!document.getElementById('contextMenuStyle')) {
+        const style = document.createElement('style');
+        style.id = 'contextMenuStyle';
+        style.textContent = `
+            .new-tab {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                width: 30px;
+                font-weight: bold;
+                cursor: pointer;
+            }
+            
+            .empty-message {
+                cursor: default;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+});
     </script>
 </body>
 </html>
