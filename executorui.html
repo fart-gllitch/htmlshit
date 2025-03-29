@@ -3,28 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exploris</title>
+    <title>AWP.GG</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.43.0/min/vs/loader.js"></script>
     <style>
         :root {
-            --primary: #007acc;
-            --secondary: #2a2a2a;
-            --background: #131313;
-            --sidebar: #181818;
-            --text: #d0d0d0;
+            --background: #0e0e0e;
+            --editor-bg: #1a1a1a;
+            --sidebar: #1a1a1a;
+            --console-bg: #0e0e0e;
+            --tab-bg: #1a1a1a;
+            --active-tab-bg: #2a2a2a;
             --border: #333333;
-            --active-tab: #121212;
-            --inactive-tab: #1c1c1c;
-            --button-primary: #0e4d78;
-            --button-hover: #0d5f98;
-            --border-radius: 8px;
+            --text: #cccccc;
+            --accent: #ff6b6b;
+            --button-bg: #1e1e1e;
+            --button-hover: #333333;
         }
         
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Consolas', 'Courier New', monospace;
         }
         
         body {
@@ -34,28 +34,50 @@
             background-color: var(--background);
             color: var(--text);
             overflow: hidden;
-            -webkit-app-region: drag; /* This makes the entire window draggable by default */
-        }
-        
-        /* Make interactive elements not draggable */
-        button, input, select, textarea, .file, .tab, #editor, 
-        .monaco-editor, .monaco-editor *, .editor-wrapper * {
-            -webkit-app-region: no-drag;
         }
         
         .header {
-            height: 50px;
-            background: linear-gradient(to right, #121212, #1a1a1a);
+            height: 40px;
+            background-color: #1a1a1a;
             display: flex;
             align-items: center;
             padding: 0 15px;
             border-bottom: 1px solid var(--border);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
         
-        .header h1 {
+        .logo {
             font-size: 18px;
-            font-weight: 500;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .logo span {
+            color: var(--accent);
+        }
+        
+        .window-controls {
+            margin-left: auto;
+            display: flex;
+            gap: 15px;
+        }
+        
+        .window-control {
+            height: 12px;
+            width: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .minimize {
+            background-color: #FFBD44;
+        }
+        
+        .maximize {
+            background-color: #00CA4E;
+        }
+        
+        .close {
+            background-color: #FF605C;
         }
         
         .main-container {
@@ -64,129 +86,45 @@
             overflow: hidden;
         }
         
-        .sidebar {
-            width: 250px;
-            background: linear-gradient(to bottom, #161616, #1a1a1a);
-            display: flex;
-            flex-direction: column;
-            border-right: 1px solid var(--border);
-        }
-        
-        .sidebar-header {
-            padding: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-            background: linear-gradient(to bottom, #1d1d1d, #181818);
-        }
-        
-        .sidebar-header h2 {
-            font-size: 14px;
-            font-weight: 500;
-        }
-        
-        .add-file-btn {
-            background: linear-gradient(to bottom, var(--button-primary), #0b3d61);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 4px 8px;
-            cursor: pointer;
-            font-size: 12px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-        }
-        
-        .add-file-btn:hover {
-            background: linear-gradient(to bottom, var(--button-hover), #0c4d7a);
-        }
-        
-        .file-explorer {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px;
-        }
-        
-        .file {
-            padding: 5px 8px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            border-radius: 4px;
-            margin-bottom: 2px;
-            transition: background-color 0.2s;
-        }
-        
-        .file:hover {
-            background-color: rgba(255, 255, 255, 0.05);
-        }
-        
-        .file.active {
-            background: linear-gradient(to right, rgba(0, 90, 153, 0.2), rgba(0, 90, 153, 0.05));
-            border-left: 2px solid var(--primary);
-        }
-        
-        .file-icon {
-            margin-right: 8px;
-            font-size: 14px;
-        }
-        
-        .editor-container {
+        .content-area {
             flex: 1;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            background-color: var(--background);
         }
         
         .tabs {
             display: flex;
-            background: linear-gradient(to bottom, #1c1c1c, #161616);
+            background-color: var(--background);
             border-bottom: 1px solid var(--border);
             overflow-x: auto;
-            scrollbar-width: thin;
-        }
-        
-        .tabs::-webkit-scrollbar {
-            height: 4px;
-        }
-        
-        .tabs::-webkit-scrollbar-thumb {
-            background-color: var(--border);
+            height: 35px;
         }
         
         .tab {
             padding: 8px 15px;
-            background-color: var(--inactive-tab);
+            background-color: var(--tab-bg);
             border-right: 1px solid var(--border);
             cursor: pointer;
             white-space: nowrap;
             display: flex;
             align-items: center;
             user-select: none;
-            transition: background-color 0.2s;
         }
         
         .tab.active {
-            background: linear-gradient(to bottom, #161616, #101010);
-            border-bottom: 2px solid var(--primary);
+            background-color: var(--active-tab-bg);
         }
         
-        .tab .close {
+        .tab .close-icon {
             margin-left: 8px;
-            opacity: 0.5;
-            font-size: 12px;
+            opacity: 0.7;
         }
         
-        .tab:hover .close {
-            opacity: 1;
-        }
-        
-        .editor-wrapper {
+        .editor-container {
             flex: 1;
-            overflow: hidden;
             position: relative;
-            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
         }
         
         #editor {
@@ -194,56 +132,133 @@
             height: 100%;
         }
         
-        .output-container {
+        .console-container {
             height: 150px;
-            background-color: #0e0e0e;
+            background-color: var(--console-bg);
             border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .console-header {
+            padding: 5px 10px;
+            background-color: #222;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .console-toggle {
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .console-output {
+            flex: 1;
+            padding: 8px;
             overflow-y: auto;
-            font-family: monospace;
-            padding: 10px;
-            display: none;
+            font-size: 13px;
+            font-family: 'Consolas', 'Courier New', monospace;
         }
         
-        .output-container.show {
-            display: block;
-        }
-        
-        .output-line {
-            margin-bottom: 3px;
-        }
-        
-        .output-error {
+        .console-error {
             color: #ff6b6b;
         }
         
-        .output-success {
-            color: #6bff6b;
+        .console-line {
+            margin-bottom: 3px;
+            display: flex;
+        }
+        
+        .console-timestamp {
+            color: #666;
+            margin-right: 8px;
         }
         
         .toolbar {
-            height: 40px;
-            background: linear-gradient(to bottom, #1a1a1a, #121212);
+            height: 35px;
+            background-color: var(--background);
             display: flex;
             align-items: center;
-            padding: 0 15px;
+            padding: 0 10px;
             gap: 10px;
             border-top: 1px solid var(--border);
         }
         
         .toolbar button {
-            padding: 6px 12px;
-            background: linear-gradient(to bottom, var(--button-primary), #0a3455);
-            color: white;
-            border: none;
-            border-radius: var(--border-radius);
+            padding: 5px 10px;
+            background-color: var(--button-bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 3px;
             cursor: pointer;
-            font-size: 13px;
-            transition: background 0.2s;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            font-size: 12px;
+            display: flex;
+            align-items: center;
         }
         
         .toolbar button:hover {
-            background: linear-gradient(to bottom, var(--button-hover), #0b4975);
+            background-color: var(--button-hover);
+        }
+        
+        .toolbar button svg {
+            margin-right: 5px;
+            width: 14px;
+            height: 14px;
+        }
+        
+        .sidebar {
+            width: 230px;
+            background-color: var(--sidebar);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .sidebar-section {
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .sidebar-header {
+            padding: 8px 10px;
+            font-size: 13px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            background-color: #1a1a1a;
+        }
+        
+        .sidebar-header:hover {
+            background-color: #252525;
+        }
+        
+        .sidebar-content {
+            padding: 5px 0;
+        }
+        
+        .file-item {
+            padding: 5px 10px 5px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            font-size: 13px;
+        }
+        
+        .file-item:hover {
+            background-color: #252525;
+        }
+        
+        .file-item.active {
+            background-color: #333;
+        }
+        
+        .file-icon {
+            margin-right: 8px;
+            font-size: 13px;
         }
         
         .file-dialog {
@@ -251,30 +266,48 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: linear-gradient(to bottom, #252525, #1e1e1e);
+            background-color: #252525;
             padding: 20px;
-            border-radius: var(--border-radius);
+            border-radius: 5px;
             box-shadow: 0 5px 20px rgba(0, 0, 0, 0.7);
             z-index: 10;
             display: none;
-            border: 1px solid #3a3a3a;
-            -webkit-app-region: no-drag; /* Ensure dialog is not draggable */
+            border: 1px solid #444;
+            min-width: 300px;
+        }
+        
+        .file-dialog h3 {
+            margin-bottom: 15px;
+            font-size: 16px;
         }
         
         .file-dialog input {
             width: 100%;
             padding: 8px;
             margin-bottom: 15px;
-            background-color: #111111;
-            border: 1px solid #3a3a3a;
+            background-color: #1a1a1a;
+            border: 1px solid #444;
             color: var(--text);
-            border-radius: 4px;
+            border-radius: 3px;
         }
         
         .file-dialog-buttons {
             display: flex;
             justify-content: flex-end;
             gap: 10px;
+        }
+        
+        .file-dialog-buttons button {
+            padding: 5px 10px;
+            background-color: var(--button-bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .file-dialog-buttons button:hover {
+            background-color: var(--button-hover);
         }
         
         .overlay {
@@ -286,110 +319,153 @@
             background-color: rgba(0, 0, 0, 0.7);
             z-index: 5;
             display: none;
-            backdrop-filter: blur(2px);
         }
         
-        .toggle-output {
-            margin-left: auto;
+        .user-status {
             display: flex;
             align-items: center;
-            gap: 5px;
+            padding: 10px;
+            border-top: 1px solid var(--border);
+            margin-top: auto;
+        }
+        
+        .user-avatar {
+            width: 25px;
+            height: 25px;
+            background-color: #444;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .user-name {
             font-size: 13px;
         }
         
-        .toggle-output input {
-            margin: 0;
-        }
-        
-        .loading-indicator {
-            display: none;
-            margin-left: 10px;
-            color: #007acc;
-            animation: pulse 1.5s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 0.5; }
-            50% { opacity: 1; }
-            100% { opacity: 0.5; }
-        }
-
-        /* Custom window controls */
-        .window-controls {
+        .timestamp-toggle {
             margin-left: auto;
-            display: flex;
-            gap: 8px;
-        }
-
-        .window-control-button {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            -webkit-app-region: no-drag;
+            opacity: 0.7;
         }
-
-        .minimize-button {
-            background-color: #FFBD44;
-        }
-
-        .maximize-button {
-            background-color: #00CA4E;
-        }
-
-        .close-button {
-            background-color: #FF605C;
-        }
-
-        .window-control-button:hover {
-            filter: brightness(1.1);
+        
+        .timestamp-toggle:hover {
+            opacity: 1;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Lua Sandbox Editor</h1>
-        <!-- Custom window controls -->
+        <div class="logo">AWP<span>.GG</span></div>
+        <div class="scripting-label" style="margin-left: 20px; opacity: 0.7;">Scripting</div>
         <div class="window-controls">
-            <div class="window-control-button minimize-button" id="minimizeBtn"></div>
-            <div class="window-control-button maximize-button" id="maximizeBtn"></div>
-            <div class="window-control-button close-button" id="closeBtn"></div>
+            <div class="window-control minimize"></div>
+            <div class="window-control maximize"></div>
+            <div class="window-control close"></div>
         </div>
     </div>
     
     <div class="main-container">
-        <div class="sidebar">
-            <div class="sidebar-header">
-                <h2>FILES</h2>
-                <button class="add-file-btn" id="newFileBtn">+ New File</button>
+        <div class="content-area">
+            <div class="tabs">
+                <div class="tab active">
+                    <span>Untitled Tab</span>
+                    <span class="close-icon">×</span>
+                </div>
+                <div class="tab">
+                    <span>Untitled Tab</span>
+                    <span class="close-icon">×</span>
+                </div>
+                <div class="tab">
+                    <span>Untitled Tab</span>
+                    <span class="close-icon">×</span>
+                </div>
+                <div class="tab">
+                    <span>Untitled Tab</span>
+                    <span class="close-icon">×</span>
+                </div>
             </div>
-            <div class="file-explorer" id="fileExplorer">
-                <!-- Files will be added here -->
+            
+            <div class="editor-container">
+                <div id="editor"></div>
+            </div>
+            
+            <div class="console-container">
+                <div class="console-header">
+                    <span>Output</span>
+                    <span class="console-toggle">╳</span>
+                </div>
+                <div class="console-output" id="consoleOutput">
+                    <div class="console-line">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="toolbar">
+                <button id="executeBtn">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 3L19 12L5 21V3Z" fill="currentColor"/>
+                    </svg>
+                    Execute
+                </button>
+                <button id="clearBtn">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6 5H18M9 5V3H15V5M10 9V15M14 9V15M8 9L8 19H16L16 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Clear
+                </button>
+                <button id="openBtn">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 19V5a2 2 0 012-2h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2z" stroke="currentColor" stroke-width="2"/>
+                        <path d="M9 3v4m6-4v4" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    Open
+                </button>
+                <button id="executeBtn2">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 3L19 12L5 21V3Z" fill="currentColor"/>
+                    </svg>
+                    Execute
+                </button>
+                <button id="saveBtn">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Save
+                </button>
             </div>
         </div>
         
-        <div class="editor-container">
-            <div class="tabs" id="tabs">
-                <!-- Tabs will be added here -->
-            </div>
-            <div class="editor-wrapper">
-                <div id="editor"></div>
-            </div>
-            <div class="output-container" id="outputContainer">
-                <!-- Output will appear here -->
-            </div>
-            <div class="toolbar">
-                <button id="executeBtn">Execute</button>
-                <button id="clearBtn">Clear</button>
-                <button id="saveBtn">Save</button>
-                <span id="loadingIndicator" class="loading-indicator">Running...</span>
-                <div class="toggle-output">
-                    <input type="checkbox" id="showOutput" checked>
-                    <label for="showOutput">Show Output</label>
+        <div class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-header">
+                    <span>Workspace</span>
+                    <span>▼</span>
                 </div>
+                <div class="sidebar-content">
+                    <div class="file-item">
+                        <span class="file-icon">📄</span>
+                        <span>Infinite Yield.txt</span>
+                    </div>
+                    <div class="file-item">
+                        <span class="file-icon">📄</span>
+                        <span>Dex Explorer.txt</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-header">
+                    <span>Favorites</span>
+                    <span>▼</span>
+                </div>
+                <div class="sidebar-content" style="display: none;">
+                    <!-- Favorites will be listed here -->
+                </div>
+            </div>
+            
+            <div class="user-status">
+                <div class="user-avatar"></div>
+                <div class="user-name">AwpUser123</div>
             </div>
         </div>
     </div>
@@ -397,79 +473,15 @@
     <div class="overlay" id="overlay"></div>
     
     <div class="file-dialog" id="fileDialog">
-        <h3>Create New File</h3>
+        <h3>New Lua File</h3>
         <input type="text" id="fileName" placeholder="filename.lua">
         <div class="file-dialog-buttons">
-            <button id="cancelFileBtn">Cancel</button>
-            <button id="createFileBtn">Create</button>
+            <button id="cancelBtn">Cancel</button>
+            <button id="createBtn">Create</button>
         </div>
     </div>
     
     <script>
-        // Sample Roblox Lua snippets for autocomplete
-        const luaSnippets = [
-            {
-                label: 'print',
-                kind: 0,
-                detail: 'print(value: any)',
-                insertText: 'print(${1:value})',
-                insertTextRules: 4
-            },
-            {
-                label: 'function',
-                kind: 14,
-                detail: 'function name() ... end',
-                insertText: 'function ${1:name}(${2:params})\n\t${3:-- body}\nend',
-                insertTextRules: 4
-            },
-            {
-                label: 'if',
-                kind: 14,
-                detail: 'if condition then ... end',
-                insertText: 'if ${1:condition} then\n\t${2:-- body}\nend',
-                insertTextRules: 4
-            },
-            {
-                label: 'for',
-                kind: 14,
-                detail: 'for i=start,end do ... end',
-                insertText: 'for ${1:i}=${2:1},${3:10} do\n\t${4:-- body}\nend',
-                insertTextRules: 4
-            },
-            {
-                label: 'game',
-                kind: 6,
-                detail: 'Roblox game object',
-                insertText: 'game',
-            },
-            {
-                label: 'workspace',
-                kind: 6,
-                detail: 'Roblox workspace object',
-                insertText: 'workspace',
-            },
-            {
-                label: 'Instance.new',
-                kind: 1,
-                detail: 'Instance.new(className: string, parent?: Instance)',
-                insertText: 'Instance.new("${1:Part}"${2:, parent})',
-                insertTextRules: 4
-            },
-        ];
-
-        // File system simulation
-        let files = [
-            { id: 1, name: 'main.lua', content: '-- Welcome to Lua Sandbox\nprint("Hello, World!")' },
-            { id: 2, name: 'module.lua', content: 'local Module = {}\n\nfunction Module.sayHello(name)\n\treturn "Hello, " .. name\nend\n\nreturn Module' }
-        ];
-        
-        let activeFileId = 1;
-        let nextFileId = 3;
-        let editor;
-        
-        // API endpoint configuration
-        const API_ENDPOINT = "http://localhost:5000/execute";
-        
         // Initialize Monaco Editor
         require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.43.0/min/vs' }});
         require(['vs/editor/editor.main'], function() {
@@ -529,95 +541,8 @@
                     ]
                 }
             });
-            
-            // Register Lua snippets completion provider
-            monaco.languages.registerCompletionItemProvider('lua', {
-                provideCompletionItems: function(model, position) {
-                    const suggestions = [...luaSnippets];
-                    
-                    // Add autocomplete for existing variables in current file
-                    const text = model.getValue();
-                    const localVarRegex = /local\s+([a-zA-Z_][a-zA-Z0-9_]*)/g;
-                    let match;
-                    while (match = localVarRegex.exec(text)) {
-                        suggestions.push({
-                            label: match[1],
-                            kind: monaco.languages.CompletionItemKind.Variable,
-                            detail: 'Local variable',
-                            insertText: match[1]
-                        });
-                    }
-                    
-                    // Add autocomplete for functions
-                    const funcRegex = /function\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g;
-                    while (match = funcRegex.exec(text)) {
-                        suggestions.push({
-                            label: match[1],
-                            kind: monaco.languages.CompletionItemKind.Function,
-                            detail: 'Function',
-                            insertText: match[1] + '(${1:})',
-                            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
-                        });
-                    }
-                    
-                    return { suggestions };
-                }
-            });
-            
-            // Create editor
-            editor = monaco.editor.create(document.getElementById('editor'), {
-                value: files.find(f => f.id === activeFileId).content,
-                language: 'lua',
-                theme: 'vs-dark',
-                automaticLayout: true,
-                minimap: {
-                    enabled: true
-                },
-                fontSize: 14,
-                lineNumbers: 'on',
-                scrollBeyondLastLine: false,
-                renderLineHighlight: 'all',
-                roundedSelection: true,
-                cursorBlinking: 'smooth',
-                cursorSmoothCaretAnimation: 'on',
-                smoothScrolling: true
-            });
-            
-            // Initial setup
-            refreshFileExplorer();
-            refreshTabs();
-            
-            // Show output container if checkbox is checked
-            updateOutputVisibility();
-        });
-        
-        // Output handling functions
-        function appendToOutput(text, type = 'normal') {
-            const outputContainer = document.getElementById('outputContainer');
-            const line = document.createElement('div');
-            line.className = `output-line output-${type}`;
-            line.textContent = text;
-            outputContainer.appendChild(line);
-            outputContainer.scrollTop = outputContainer.scrollHeight;
-        }
-        
-        function clearOutput() {
-            document.getElementById('outputContainer').innerHTML = '';
-        }
-        
-        function updateOutputVisibility() {
-            const showOutput = document.getElementById('showOutput').checked;
-            const outputContainer = document.getElementById('outputContainer');
-            
-            if (showOutput) {
-                outputContainer.classList.add('show');
-            } else {
-                outputContainer.classList.remove('show');
-            }
-        }
-        
-        // Function to execute Lua code through Python API
-        async function executeLuaCode(code) {
+
+            async function executeLuaCode(code) {
             const loadingIndicator = document.getElementById('loadingIndicator');
             loadingIndicator.style.display = 'inline';
             
@@ -664,152 +589,136 @@
                 loadingIndicator.style.display = 'none';
             }
         }
-        
-        // UI interaction functions
-        document.getElementById('newFileBtn').addEventListener('click', () => {
-            document.getElementById('overlay').style.display = 'block';
-            document.getElementById('fileDialog').style.display = 'block';
-            document.getElementById('fileName').value = '';
-            document.getElementById('fileName').focus();
-        });
-        
-        document.getElementById('cancelFileBtn').addEventListener('click', () => {
-            document.getElementById('overlay').style.display = 'none';
-            document.getElementById('fileDialog').style.display = 'none';
-        });
-        
-        document.getElementById('createFileBtn').addEventListener('click', () => {
-            const fileName = document.getElementById('fileName').value.trim();
-            if (fileName) {
-                let finalName = fileName;
-                if (!finalName.endsWith('.lua')) {
-                    finalName += '.lua';
-                }
-                
-                const newFile = {
-                    id: nextFileId++,
-                    name: finalName,
-                    content: '-- New Lua file\n'
-                };
-                
-                files.push(newFile);
-                setActiveFile(newFile.id);
-                
-                document.getElementById('overlay').style.display = 'none';
-                document.getElementById('fileDialog').style.display = 'none';
-            }
-        });
-        
-        document.getElementById('executeBtn').addEventListener('click', () => {
-            const content = editor.getValue();
-            console.log('Executing Lua code:', content);
-            executeLuaCode(content);
-        });
-        
-        document.getElementById('clearBtn').addEventListener('click', () => {
-            editor.setValue('-- Cleared editor\n');
-            clearOutput();
-        });
-        
-        document.getElementById('saveBtn').addEventListener('click', () => {
-            const currentFile = files.find(f => f.id === activeFileId);
-            currentFile.content = editor.getValue();
-            console.log('Saved file:', currentFile.name);
-            appendToOutput(`Saved ${currentFile.name}`, 'success');
-        });
-        
-        document.getElementById('showOutput').addEventListener('change', updateOutputVisibility);
-        
-        // Allow Enter key to create a new file
-        document.getElementById('fileName').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                document.getElementById('createFileBtn').click();
-            }
-        });
-        
-        // Helper functions
-        function refreshFileExplorer() {
-            const fileExplorer = document.getElementById('fileExplorer');
-            fileExplorer.innerHTML = '';
             
-            files.forEach(file => {
-                const fileElement = document.createElement('div');
-                fileElement.className = `file ${file.id === activeFileId ? 'active' : ''}`;
-                fileElement.innerHTML = `
-                    <span class="file-icon">📄</span>
-                    <span>${file.name}</span>
-                `;
-                fileElement.addEventListener('click', () => {
-                    setActiveFile(file.id);
-                });
-                fileExplorer.appendChild(fileElement);
+            // Create editor with AWP.GG-like dark theme
+            const editor = monaco.editor.create(document.getElementById('editor'), {
+                value: "-- Welcome to AWP.GG!\n\nprint(\"Hello, World!\")",
+                language: 'lua',
+                theme: 'vs-dark',
+                automaticLayout: true,
+                fontFamily: "'Consolas', 'Courier New', monospace",
+                fontSize: 14,
+                lineNumbers: 'on',
+                scrollBeyondLastLine: false,
+                minimap: {
+                    enabled: true,
+                    scale: 1,
+                    showSlider: "mouseover"
+                },
+                renderLineHighlight: 'all',
+                selectOnLineNumbers: true,
+                cursorBlinking: 'blink',
             });
-        }
-        
-        function refreshTabs() {
-            const tabsContainer = document.getElementById('tabs');
-            tabsContainer.innerHTML = '';
             
-            // Only show tabs for active and recently accessed files
-            const relevantFiles = files.filter(f => f.id === activeFileId || files.indexOf(f) < 5);
+            // Event Listeners
+            document.querySelector('.console-toggle').addEventListener('click', function() {
+                const consoleContainer = document.querySelector('.console-container');
+                if (consoleContainer.style.display === 'none') {
+                    consoleContainer.style.display = 'flex';
+                    this.textContent = '╳';
+                } else {
+                    consoleContainer.style.display = 'none';
+                    this.textContent = '▼';
+                }
+            });
             
-            relevantFiles.forEach(file => {
-                const tabElement = document.createElement('div');
-                tabElement.className = `tab ${file.id === activeFileId ? 'active' : ''}`;
-                tabElement.innerHTML = `
-                    <span>${file.name}</span>
-                    <span class="close">×</span>
-                `;
+            document.getElementById('executeBtn').addEventListener('click', function() {
+                const code = editor.getValue();
+                console.log('Executing code:', code);
+                appendToConsole('Executing script...', 'normal');
+                executeLuaCode(content);
+                setTimeout(() => {
+                }, 500);
+            });
+            
+            document.getElementById('executeBtn2').addEventListener('click', function() {
+                const code = editor.getValue();
+                appendToConsole('Executing script...', 'normal');
+                setTimeout(() => {
+                    appendToConsole('Test is not a valid member of Model "Workspace.Part"', 'error');
+                }, 500);
+            });
+            
+            document.getElementById('clearBtn').addEventListener('click', function() {
+                editor.setValue('-- Cleared editor\n');
+                clearConsole();
+            });
+            
+            document.getElementById('saveBtn').addEventListener('click', function() {
+                appendToConsole('Script saved successfully', 'success');
+            });
+            
+            // Console functions
+            function appendToConsole(message, type = 'normal') {
+                const consoleOutput = document.getElementById('consoleOutput');
+                const timestamp = getCurrentTimestamp();
                 
-                tabElement.addEventListener('click', (e) => {
-                    if (e.target.className === 'close') {
-                        closeFile(file.id);
-                    } else {
-                        setActiveFile(file.id);
-                    }
+                const line = document.createElement('div');
+                line.className = 'console-line';
+                
+                const timeElement = document.createElement('span');
+                timeElement.className = 'console-timestamp';
+                timeElement.textContent = timestamp;
+                
+                const messageElement = document.createElement('span');
+                if (type === 'error') {
+                    messageElement.className = 'console-error';
+                } else if (type === 'success') {
+                    messageElement.style.color = '#6bff6b';
+                }
+                messageElement.textContent = message;
+                
+                line.appendChild(timeElement);
+                line.appendChild(messageElement);
+                
+                consoleOutput.appendChild(line);
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            }
+            
+            function clearConsole() {
+                document.getElementById('consoleOutput').innerHTML = '';
+            }
+            
+            function getCurrentTimestamp() {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                return `[${hours}:${minutes}:${seconds}]`;
+            }
+            
+            // Tab interaction
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
                 });
                 
-                tabsContainer.appendChild(tabElement);
-            });
-        }
-        
-        function setActiveFile(fileId) {
-            // Save current file content
-            if (editor) {
-                const currentFile = files.find(f => f.id === activeFileId);
-                if (currentFile) {
-                    currentFile.content = editor.getValue();
+                const closeBtn = tab.querySelector('.close-icon');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        if (document.querySelectorAll('.tab').length > 1) {
+                            tab.remove();
+                        }
+                    });
                 }
-            }
+            });
             
-            activeFileId = fileId;
+            // File interactions
+            document.querySelectorAll('.file-item').forEach(file => {
+                file.addEventListener('click', function() {
+                    document.querySelectorAll('.file-item').forEach(f => f.classList.remove('active'));
+                    this.classList.add('active');
+                    // Here you would normally load file content to editor
+                });
+            });
             
-            if (editor) {
-                const newFile = files.find(f => f.id === fileId);
-                editor.setValue(newFile.content);
-            }
-            
-            refreshFileExplorer();
-            refreshTabs();
-        }
-        
-        function closeFile(fileId) {
-            // Don't allow closing the last file
-            if (files.length <= 1) {
-                return;
-            }
-            
-            // If closing active file, activate another one
-            let newActiveId = activeFileId;
-            if (fileId === activeFileId) {
-                const index = files.findIndex(f => f.id === fileId);
-                const newIndex = index > 0 ? index - 1 : 1;
-                newActiveId = files[newIndex].id;
-            }
-            
-            files = files.filter(f => f.id !== fileId);
-            setActiveFile(newActiveId);
-        }
+            // Initialize with a console message
+            setTimeout(() => {
+                appendToConsole('Exploris ready', 'success');
+            }, 200);
+        });
     </script>
 </body>
 </html>
