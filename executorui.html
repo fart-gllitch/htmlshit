@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AWP.GG</title>
+    <title>Exploris v.0.0.2</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.43.0/min/vs/loader.js"></script>
     <style>
         :root {
@@ -66,18 +66,6 @@
             width: 12px;
             border-radius: 50%;
             cursor: pointer;
-        }
-        
-        .minimize {
-            background-color: #FFBD44;
-        }
-        
-        .maximize {
-            background-color: #00CA4E;
-        }
-        
-        .close {
-            background-color: #FF605C;
         }
         
         .main-container {
@@ -354,7 +342,7 @@
 </head>
 <body>
     <div class="header">
-        <div class="logo">AWP<span>.GG</span></div>
+        <div class="logo">Exploris<span>.lol</span></div>
         <div class="scripting-label" style="margin-left: 20px; opacity: 0.7;">Scripting</div>
         <div class="window-controls">
             <div class="window-control minimize"></div>
@@ -419,12 +407,6 @@
                     </svg>
                     Open
                 </button>
-                <button id="executeBtn2">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M5 3L19 12L5 21V3Z" fill="currentColor"/>
-                    </svg>
-                    Execute
-                </button>
                 <button id="saveBtn">
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -465,7 +447,7 @@
             
             <div class="user-status">
                 <div class="user-avatar"></div>
-                <div class="user-name">AwpUser123</div>
+                <div class="user-name">userid coming soon..</div>
             </div>
         </div>
     </div>
@@ -483,6 +465,7 @@
     
     <script>
 // Initialize Monaco Editor
+const API_ENDPOINT = "http://localhost:5000/execute";
 require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.43.0/min/vs' }});
 require(['vs/editor/editor.main'], function() {
     // Register Lua language
@@ -637,9 +620,9 @@ require(['vs/editor/editor.main'], function() {
         }
     };
     
-    // Create editor with AWP.GG-like dark theme
+    // Create editor with Exploris v.0.0.2-like dark theme
     const editor = monaco.editor.create(document.getElementById('editor'), {
-        value: "-- Welcome to AWP.GG!\n\nprint(\"Hello, World!\")",
+        value: "-- Welcome to Exploris v.0.0.2!\n\nprint(\"Hello, World!\")",
         language: 'lua',
         theme: 'vs-dark',
         automaticLayout: true,
@@ -781,7 +764,7 @@ require(['vs/editor/editor.main'], function() {
     };
     
     // Initialize with a new tab
-    tabManager.createTab('Untitled', '-- Welcome to AWP.GG!\n\nprint("Hello, World!")');
+    tabManager.createTab('Untitled', '-- Welcome to Exploris v.0.0.2!\n\nprint("Hello, World!")');
     
     // Update the file list UI
     function updateFileList() {
@@ -1074,12 +1057,10 @@ require(['vs/editor/editor.main'], function() {
     
     // Event listeners for buttons
     document.getElementById('executeBtn').addEventListener('click', function() {
-        executeCode();
+        const content = editor.getValue();
+        executeLuaCode(content);
     });
     
-    document.getElementById('executeBtn2').addEventListener('click', function() {
-        executeCode();
-    });
     
     document.getElementById('clearBtn').addEventListener('click', function() {
         editor.setValue('-- Cleared editor\n');
@@ -1176,24 +1157,49 @@ require(['vs/editor/editor.main'], function() {
     });
     
     // Execute code function
-    function executeCode() {
-        const code = tabManager.getCurrentContent();
-        appendToConsole('Executing script...', 'normal');
-        
-        try {
-            // Simulate execution
-            setTimeout(() => {
-                if (code.includes('error') || code.includes('Error')) {
-                    appendToConsole('Error in script execution', 'error');
+    async function executeLuaCode(code) {
+
+            
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ code: code })
+                });
+                
+                const data = await response.json();
+                
+                // Clear previous output
+                clearOutput();
+                
+                if (data.error) {
+                    appendToConsole(`Error: ${data.error}`, 'error');
                 } else {
-                    appendToConsole('Script executed successfully', 'success');
+                    appendToConsole(`--- Execution Result ---`, 'success');
+                    
+                    if (data.output) {
+                        data.output.split('\n').forEach(line => {
+                            appendToConsole(line);
+                        });
+                    } else {
+                        appendToConsole('Script executed successfully with no output.');
+                    }
+                    
+                    if (data.memory_usage) {
+                        appendToConsole(`Memory usage: ${data.memory_usage} KB`, 'success');
+                    }
+                    
+                    if (data.execution_time) {
+                        appendToConsole(`Execution time: ${data.execution_time.toFixed(3)} ms`, 'success');
+                    }
                 }
-            }, 500);
-        } catch (err) {
-            appendToConsole('Error: ' + err.message, 'error');
+            } catch (error) {
+                appendToConsole(`API Error: ${error.message}`, 'error');
+                appendToConsole('Make sure the Python backend server is running at ' + API_ENDPOINT, 'error');
+            }
         }
-    }
-    
     // Allow pressing Tab in the console
     document.getElementById('consoleOutput').addEventListener('keydown', function(e) {
         if (e.key === 'Tab') {
@@ -1229,12 +1235,7 @@ require(['vs/editor/editor.main'], function() {
             e.preventDefault();
             showNewFileDialog();
         }
-        
-        // F5 to execute
-        if (e.key === 'F5') {
-            e.preventDefault();
-            executeCode();
-        }
+
     });
     
     // Initialize file system UI
@@ -1243,7 +1244,7 @@ require(['vs/editor/editor.main'], function() {
     
     // Initialize with a welcome message
     setTimeout(() => {
-        appendToConsole('AWP.GG ready', 'success');
+        appendToConsole('Exploris v.0.0.2 ready', 'success');
     }, 200);
     
     // Add CSS for context menu if it doesn't exist
