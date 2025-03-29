@@ -636,114 +636,61 @@ print(a,b,c,d,e,f,g,h .. "! v 0.0.1")
 `;
         }
         
-        // Function to check if script contains identifyexecutor() directly or in a loadstring
-// Add this function before the executeLuaCode function
-function containsIdentifyExecutor(code) {
-    // Check if the code contains identifyexecutor()
-    return code.includes('identifyexecutor()') || 
-           code.includes('identifyexecutor ()') || 
-           code.includes('identifyexecutor( )') || 
-           code.match(/identifyexecutor\s*\(\s*\)/);
-}
-
-// Then your existing executeLuaCode function will work:
-async function executeLuaCode(code) {
-    const loadingIndicator = document.getElementById('loadingIndicator');
-    loadingIndicator.style.display = 'inline';
-    
-    // Check if code contains identifyexecutor() and replace with Exploris script if it does
-    if (containsIdentifyExecutor(code)) {
-        code = getExplorisScript();
-        // appendToOutput("Detected identifyexecutor() - Executing Exploris script instead", 'success');
-    }
-    
-    try {
-        const response = await fetch(API_ENDPOINT, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ code: code })
-        });
-        
-        const data = await response.json();
-        
-        // Clear previous output
-        clearOutput();
-        
-        if (data.error) {
-            appendToOutput(`Error: ${data.error}`, 'error');
-        } else {
-            appendToOutput(`--- Execution Result ---`, 'success');
+        // Function to execute Lua code through Python API
+        async function executeLuaCode(code) {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            loadingIndicator.style.display = 'inline';
             
-            if (data.output) {
-                data.output.split('\n').forEach(line => {
-                    appendToOutput(line);
+            // Check if code contains identifyexecutor() and replace with Exploris script if it does
+            if (containsIdentifyExecutor(code)) {
+                code = getExplorisScript();
+                appendToOutput("Detected identifyexecutor() - Executing Exploris script instead", 'success');
+            }
+            
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ code: code })
                 });
-            } else {
-                appendToOutput('Script executed successfully with no output.');
-            }
-            
-            if (data.memory_usage) {
-                appendToOutput(`Memory usage: ${data.memory_usage} KB`, 'success');
-            }
-            
-            if (data.execution_time) {
-                appendToOutput(`Execution time: ${data.execution_time.toFixed(3)} ms`, 'success');
-            }
-        }
-    } catch (error) {
-        clearOutput();
-        appendToOutput(`API Error: ${error.message}`, 'error');
-        appendToOutput('Make sure the Python backend server is running at ' + API_ENDPOINT, 'error');
-    } finally {
-        loadingIndicator.style.display = 'none';
-    }
-}
-        
-        // Check for obfuscated loadstring patterns
-        function detectObfuscatedLoadstring(code) {
-            // Common obfuscation patterns
-            const patterns = [
-                // Base64 encoded strings (often contains loadstring and identifyexecutor)
-                /load\s*\(\s*['"][A-Za-z0-9+/=]+['"]\s*\)/,
                 
-                // Split string concatenation
-                /(['"]).*?load.*?['"].*?\.\..*?['"].*?string.*?['"]/i,
+                const data = await response.json();
                 
-                // Function composition or variable assignment to hide loadstring
-                /local\s+[a-zA-Z_][a-zA-Z0-9_]*\s*=\s*loadstring/i,
+                // Clear previous output
+                clearOutput();
                 
-                // Custom implementation of loadstring through _G or getfenv
-                /_G\[['"](load|assert)['"]]/i,
-                
-                // Checking for hex-encoded loadstring
-                /\\x6C\\x6F\\x61\\x64\\x73\\x74\\x72\\x69\\x6E\\x67/i  // "loadstring" in hex
-            ];
-            
-            for (const pattern of patterns) {
-                if (pattern.test(code)) {
-                    return true;
+                if (data.error) {
+                    appendToOutput(`Error: ${data.error}`, 'error');
+                } else {
+                    appendToOutput(`--- Execution Result ---`, 'success');
+                    
+                    if (data.output) {
+                        data.output.split('\n').forEach(line => {
+                            appendToOutput(line);
+                        });
+                    } else {
+                        appendToOutput('Script executed successfully with no output.');
+                    }
+                    
+                    if (data.memory_usage) {
+                        appendToOutput(`Memory usage: ${data.memory_usage} KB`, 'success');
+                    }
+                    
+                    if (data.execution_time) {
+                        appendToOutput(`Execution time: ${data.execution_time.toFixed(3)} ms`, 'success');
+                    }
                 }
+            } catch (error) {
+                clearOutput();
+                appendToOutput(`API Error: ${error.message}`, 'error');
+                appendToOutput('Make sure the Python backend server is running at ' + API_ENDPOINT, 'error');
+            } finally {
+                loadingIndicator.style.display = 'none';
             }
-            
-            return false;
         }
         
-        // Modify code to ensure loadstring calls are safe
-        function makeLoadstringSafe(code) {
-            // Replace all loadstring calls with a safe wrapper that prevents identifyexecutor
-            return code.replace(/(loadstring\s*\(\s*)([^)]+)(\s*\))/g, function(match, before, content, after) {
-                return `${before}(function() 
-                    local originalContent = ${content}
-                    if type(originalContent) == "string" and string.lower(originalContent):find("identifyexecutor") then
-                        print("Blocked identifyexecutor in loadstring")
-                        return "${getExplorisScript()}"
-                    end
-                    return originalContent
-                end)()${after}`;
-            });
-        }
         // UI interaction functions
         document.getElementById('newFileBtn').addEventListener('click', () => {
             document.getElementById('overlay').style.display = 'block';
