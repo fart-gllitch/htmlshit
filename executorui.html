@@ -1194,6 +1194,7 @@ require(['vs/editor/editor.main'], function() {
                     if (data.execution_time) {
                         appendToConsole(`Execution time: ${data.execution_time.toFixed(3)} ms`, 'success');
                     }
+                    clearConsole();
                 }
             } catch (error) {
                 appendToConsole(`API Error: ${error.message}`, 'error');
