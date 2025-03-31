@@ -432,6 +432,14 @@
                         <span class="file-icon">📄</span>
                         <span>Dex Explorer.txt</span>
                     </div>
+                    <div class="file-item">
+                        <span class="file-icon">📄</span>
+                        <span>ESP.txt</span>
+                    </div>
+                    <div class="file-item">
+                        <span class="file-icon">📄</span>
+                        <span>Aimlock.txt</span>
+                    </div>
                 </div>
             </div>
             
@@ -528,8 +536,10 @@ require(['vs/editor/editor.main'], function() {
     // File system implementation
     const fileSystem = {
         files: {
-            'Infinite Yield.txt': '-- Infinite Yield Script\n\nprint("Infinite Yield loaded")\n\nlocal InfiniteYield = {}\n\nfunction InfiniteYield:Init()\n    print("Initializing Infinite Yield...")\n    -- Implementation goes here\nend\n\nInfiniteYield:Init()',
-            'Dex Explorer.txt': '-- Dex Explorer Script\n\nprint("Dex Explorer loaded")\n\nlocal DexExplorer = {}\n\nfunction DexExplorer:Init()\n    print("Initializing Dex Explorer...")\n    -- Implementation goes here\nend\n\nDexExplorer:Init()'
+            'Infinite Yield.txt': 'loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()',
+            'Dex Explorer.txt': 'loadstring(game:HttpGet("https://raw.githubusercontent.com/Babyhamsta/RBLX_Scripts/main/Universal/BypassedDarkDexV3.lua", true))()',
+            'ESP Script': 'loadstring(game:HttpGet("https://raw.githubusercontent.com/fart-gllitch/luascripts/refs/heads/main/esp.lua"))()',
+            'Aimlock Script': 'loadstring(game:HttpGet("https://raw.githubusercontent.com/fart-gllitch/luascripts/refs/heads/main/aimlock.lua"))()'
         },
         favorites: {},
         activeFile: null,
